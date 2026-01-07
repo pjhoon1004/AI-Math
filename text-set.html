@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>텍스트 데이터의 집합 표현</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/pretendard/1.3.9/static/pretendard.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #f5f7fa;
+            --bg-secondary: #eef1f5;
+            --bg-card: #ffffff;
+            --bg-input: #f8f9fc;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-purple: #8b5cf6;
+            --accent-orange: #f97316;
+            --accent-pink: #ec4899;
+            --accent-green: #10b981;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --success: #22c55e;
+            --warning: #eab308;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--accent-blue);
+            margin-bottom: 16px;
+        }
+
+        h1 {
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, #1e293b 0%, #3b82f6 50%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title .icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .card-title .icon.blue { background: rgba(59, 130, 246, 0.15); }
+        .card-title .icon.cyan { background: rgba(6, 182, 212, 0.15); }
+        .card-title .icon.purple { background: rgba(139, 92, 246, 0.15); }
+        .card-title .icon.green { background: rgba(16, 185, 129, 0.15); }
+
+        /* Document Input */
+        .documents-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .document-input {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .doc-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 70px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 13px;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .doc-textarea {
+            flex: 1;
+            min-height: 70px;
+            padding: 12px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+
+        .doc-textarea:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .delete-btn {
+            width: 40px;
+            height: 40px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 10px;
+            color: #ef4444;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .delete-btn:hover { background: rgba(239, 68, 68, 0.2); }
+        .delete-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent-blue);
+        }
+
+        .btn-add {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px dashed rgba(16, 185, 129, 0.4);
+            color: var(--accent-green);
+            width: 100%;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .btn-add:hover { background: rgba(16, 185, 129, 0.2); }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        /* Options Section */
+        .options-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 16px;
+            padding: 16px;
+            background: var(--bg-input);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .option-group {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .option-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .checkbox-wrapper input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-blue);
+            cursor: pointer;
+        }
+
+        .stopwords-input {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 13px;
+        }
+
+        .stopwords-input:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+
+        .stopwords-input:disabled {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+
+        /* Step Indicator */
+        .step-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-input);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .step-item.active {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: white;
+            border-color: transparent;
+        }
+
+        .step-arrow {
+            color: var(--text-secondary);
+            font-size: 18px;
+        }
+
+        /* Result Sections */
+        .result-section {
+            margin-bottom: 24px;
+        }
+
+        .result-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .step-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: white;
+        }
+
+        .step-number.step1 { background: var(--accent-blue); }
+        .step-number.step2 { background: var(--accent-cyan); }
+        .step-number.step3 { background: var(--accent-purple); }
+        .step-number.step4 { background: var(--accent-green); }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        /* Document Display */
+        .doc-display {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .doc-item {
+            padding: 14px 18px;
+            background: var(--bg-input);
+            border-radius: 10px;
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        .doc-item-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--accent-blue);
+            margin-bottom: 6px;
+        }
+
+        .doc-item-text {
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        /* Token Display */
+        .token-display {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .token-item {
+            padding: 14px 18px;
+            background: var(--bg-input);
+            border-radius: 10px;
+            border-left: 4px solid var(--accent-cyan);
+        }
+
+        .token-item-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            margin-bottom: 10px;
+        }
+
+        .token-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .token {
+            padding: 5px 10px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .token.removed {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            text-decoration: line-through;
+        }
+
+        /* Set Display */
+        .set-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .set-item {
+            padding: 16px 18px;
+            background: var(--bg-input);
+            border-radius: 10px;
+            border-left: 4px solid var(--accent-purple);
+        }
+
+        .set-item.universal {
+            border-left-color: var(--accent-green);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .set-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .set-label {
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .set-notation {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+            font-size: 18px;
+            color: var(--accent-purple);
+        }
+
+        .set-item.universal .set-notation {
+            color: var(--accent-green);
+        }
+
+        .set-count {
+            font-size: 12px;
+            padding: 4px 10px;
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 20px;
+            color: var(--accent-purple);
+            font-weight: 600;
+        }
+
+        .set-item.universal .set-count {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent-green);
+        }
+
+        .set-elements {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .element-tag {
+            padding: 6px 12px;
+            background: white;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--accent-purple);
+        }
+
+        .set-item.universal .element-tag {
+            border-color: rgba(16, 185, 129, 0.3);
+            color: var(--accent-green);
+        }
+
+        /* Encoding Table */
+        .encoding-table-wrapper {
+            overflow-x: auto;
+        }
+
+        .encoding-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            min-width: 500px;
+        }
+
+        .encoding-table th,
+        .encoding-table td {
+            padding: 12px 16px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .encoding-table th {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 182, 212, 0.1));
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .encoding-table td {
+            background: white;
+        }
+
+        .encoding-table .index-cell {
+            font-family: 'Fira Code', 'Consolas', monospace;
+            color: var(--accent-green);
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state-text {
+            font-size: 15px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 20px 15px; }
+            .document-input { flex-wrap: wrap; }
+            .doc-label { min-width: 60px; }
+            .button-group { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
+            .step-flow { gap: 4px; }
+            .step-item { padding: 6px 12px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="badge">인공지능 수학</div>
+            <h1>텍스트 데이터의 집합 표현</h1>
+            <p class="subtitle">문서가 단어 집합으로 변환되는 과정을 단계별로 살펴봅시다</p>
+        </header>
+
+        <!-- Input Section -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <div class="icon blue">📝</div>
+                    문서 입력
+                </div>
+            </div>
+
+            <div class="documents-container" id="documentsContainer"></div>
+
+            <button class="btn btn-add" id="addDocBtn">
+                <span>+</span> 문서 추가
+            </button>
+
+            <div class="options-section">
+                <div class="option-group">
+                    <div class="option-label">⚙️ 불용어 설정</div>
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox" id="useStopwords" checked>
+                        <span>불용어 제거 적용</span>
+                    </label>
+                </div>
+                <div class="option-group" style="flex: 2;">
+                    <div class="option-label">🚫 불용어 목록 (쉼표로 구분)</div>
+                    <input type="text" class="stopwords-input" id="stopwordsInput" 
+                           value="은, 는, 이, 가, 을, 를, 의, 에, 와, 과, 도, 로, 으로, 에서, 까지, 부터, 이다, 이며"
+                           placeholder="제거할 단어들을 쉼표로 구분하여 입력">
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" id="analyzeBtn">
+                    <span>🔍</span> 분석하기
+                </button>
+                <button class="btn btn-secondary" id="resetBtn">
+                    <span>↺</span> 초기화
+                </button>
+                <button class="btn btn-secondary" id="exampleBtn">
+                    <span>📋</span> 예시 불러오기
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="card" id="resultsCard" style="display: none;">
+            <div class="step-flow">
+                <div class="step-item active">1. 문서</div>
+                <span class="step-arrow">→</span>
+                <div class="step-item active">2. 단어 분리</div>
+                <span class="step-arrow">→</span>
+                <div class="step-item active">3. 단어집합</div>
+                <span class="step-arrow">→</span>
+                <div class="step-item active">4. 정수 인코딩</div>
+            </div>
+
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let documents = [
+            { id: 1, text: '' },
+            { id: 2, text: '' }
+        ];
+        let nextId = 3;
+
+        // DOM Elements
+        const documentsContainer = document.getElementById('documentsContainer');
+        const addDocBtn = document.getElementById('addDocBtn');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const exampleBtn = document.getElementById('exampleBtn');
+        const useStopwordsCheckbox = document.getElementById('useStopwords');
+        const stopwordsInput = document.getElementById('stopwordsInput');
+        const resultsCard = document.getElementById('resultsCard');
+        const resultsContent = document.getElementById('resultsContent');
+
+        // Initialize
+        function init() {
+            renderDocuments();
+            addEventListeners();
+        }
+
+        function renderDocuments() {
+            documentsContainer.innerHTML = '';
+            documents.forEach((doc, index) => {
+                const div = document.createElement('div');
+                div.className = 'document-input';
+                div.innerHTML = `
+                    <div class="doc-label">문서 ${String.fromCharCode(65 + index)}</div>
+                    <textarea class="doc-textarea" data-id="${doc.id}" 
+                              placeholder="문서 ${String.fromCharCode(65 + index)}의 내용을 입력하세요...">${doc.text}</textarea>
+                    <button class="delete-btn" data-id="${doc.id}" ${documents.length <= 2 ? 'disabled' : ''}>×</button>
+                `;
+                documentsContainer.appendChild(div);
+            });
+        }
+
+        function addEventListeners() {
+            addDocBtn.addEventListener('click', () => {
+                documents.push({ id: nextId++, text: '' });
+                renderDocuments();
+            });
+
+            analyzeBtn.addEventListener('click', analyze);
+            resetBtn.addEventListener('click', reset);
+            exampleBtn.addEventListener('click', loadExample);
+
+            useStopwordsCheckbox.addEventListener('change', (e) => {
+                stopwordsInput.disabled = !e.target.checked;
+            });
+
+            documentsContainer.addEventListener('input', (e) => {
+                if (e.target.classList.contains('doc-textarea')) {
+                    const id = parseInt(e.target.dataset.id);
+                    const doc = documents.find(d => d.id === id);
+                    if (doc) doc.text = e.target.value;
+                }
+            });
+
+            documentsContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-btn') && !e.target.disabled) {
+                    const id = parseInt(e.target.dataset.id);
+                    if (documents.length > 2) {
+                        documents = documents.filter(d => d.id !== id);
+                        renderDocuments();
+                    }
+                }
+            });
+        }
+
+        function reset() {
+            documents = [{ id: 1, text: '' }, { id: 2, text: '' }];
+            nextId = 3;
+            renderDocuments();
+            resultsCard.style.display = 'none';
+        }
+
+        function loadExample() {
+            documents = [
+                { id: 1, text: '수학 탐구는 수학 사고의 열쇠이며, 수학은 성장의 열쇠이다.' },
+                { id: 2, text: '수학 기반 인공지능은 인공지능 사고의 열쇠이며, 인공지능은 성장의 열쇠이다.' }
+            ];
+            nextId = 3;
+            renderDocuments();
+            analyze();
+        }
+
+        // Text Processing
+        function tokenize(text) {
+            const cleaned = text.replace(/[.,!?;:'"()[\]{}]/g, ' ');
+            return cleaned.split(/\s+/).filter(w => w.length > 0);
+        }
+
+        function removeStopwordsFromWord(word, stopwords) {
+            const sortedStopwords = [...stopwords].sort((a, b) => b.length - a.length);
+            let result = word;
+            let changed = true;
+            
+            while (changed) {
+                changed = false;
+                for (const sw of sortedStopwords) {
+                    if (result.length > sw.length && result.endsWith(sw)) {
+                        result = result.slice(0, -sw.length);
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+            return result;
+        }
+
+        function processTokens(tokens, stopwords, useStopwords) {
+            if (!useStopwords) {
+                return tokens.map(t => ({ original: t, processed: t, removed: false }));
+            }
+            
+            return tokens.map(token => {
+                const processed = removeStopwordsFromWord(token, stopwords);
+                const isRemoved = processed.length === 0 || stopwords.includes(processed);
+                return {
+                    original: token,
+                    processed: isRemoved ? token : processed,
+                    removed: isRemoved
+                };
+            });
+        }
+
+        function getUniqueWords(words) {
+            return [...new Set(words)];
+        }
+
+        // Main Analysis
+        function analyze() {
+            const useStopwords = useStopwordsCheckbox.checked;
+            const stopwords = stopwordsInput.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+            const docData = [];
+            let allProcessedWords = [];
+
+            documents.forEach((doc, index) => {
+                if (doc.text.trim()) {
+                    const label = String.fromCharCode(65 + index);
+                    const tokens = tokenize(doc.text);
+                    const processedTokens = processTokens(tokens, stopwords, useStopwords);
+                    const validWords = processedTokens.filter(t => !t.removed).map(t => t.processed);
+                    const uniqueWords = getUniqueWords(validWords);
+
+                    docData.push({
+                        label,
+                        originalText: doc.text,
+                        tokens,
+                        processedTokens,
+                        set: uniqueWords
+                    });
+
+                    allProcessedWords = allProcessedWords.concat(validWords);
+                }
+            });
+
+            if (docData.length === 0) {
+                resultsCard.style.display = 'none';
+                return;
+            }
+
+            const universalSet = getUniqueWords(allProcessedWords).sort((a, b) => a.localeCompare(b, 'ko'));
+
+            renderResults(docData, universalSet, useStopwords);
+        }
+
+        function renderResults(docData, universalSet, useStopwords) {
+            resultsCard.style.display = 'block';
+
+            let html = '';
+
+            // Step 1: 원본 문서
+            html += `
+                <div class="result-section">
+                    <div class="section-header">
+                        <div class="step-number step1">1</div>
+                        <div class="section-title">원본 문서</div>
+                    </div>
+                    <div class="doc-display">
+                        ${docData.map(d => `
+                            <div class="doc-item">
+                                <div class="doc-item-label">문서 ${d.label}</div>
+                                <div class="doc-item-text">${d.originalText}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            // Step 2: 단어 분리 (토큰화)
+            html += `
+                <div class="result-section">
+                    <div class="section-header">
+                        <div class="step-number step2">2</div>
+                        <div class="section-title">단어 분리 (토큰화)${useStopwords ? ' + 불용어 제거' : ''}</div>
+                    </div>
+                    <div class="token-display">
+                        ${docData.map(d => `
+                            <div class="token-item">
+                                <div class="token-item-label">문서 ${d.label}</div>
+                                <div class="token-list">
+                                    ${d.processedTokens.map(t => `
+                                        <span class="token ${t.removed ? 'removed' : ''}">${t.original}${!t.removed && t.original !== t.processed ? ` → ${t.processed}` : ''}</span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            // Step 3: 단어집합 생성
+            html += `
+                <div class="result-section">
+                    <div class="section-header">
+                        <div class="step-number step3">3</div>
+                        <div class="section-title">단어집합 생성</div>
+                    </div>
+                    <div class="set-container">
+                        ${docData.map(d => `
+                            <div class="set-item">
+                                <div class="set-header">
+                                    <div class="set-label">
+                                        <span class="set-notation">${d.label}</span>
+                                        <span>= 문서 ${d.label}의 단어집합</span>
+                                    </div>
+                                    <span class="set-count">${d.set.length}개</span>
+                                </div>
+                                <div class="set-elements">
+                                    ${d.set.map(w => `<span class="element-tag">${w}</span>`).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                        <div class="set-item universal">
+                            <div class="set-header">
+                                <div class="set-label">
+                                    <span class="set-notation">U</span>
+                                    <span>= 전체집합 (가나다순 정렬)</span>
+                                </div>
+                                <span class="set-count">${universalSet.length}개</span>
+                            </div>
+                            <div class="set-elements">
+                                ${universalSet.map(w => `<span class="element-tag">${w}</span>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Step 4: 정수형 인코딩
+            html += `
+                <div class="result-section">
+                    <div class="section-header">
+                        <div class="step-number step4">4</div>
+                        <div class="section-title">정수형 인코딩</div>
+                    </div>
+                    <div class="encoding-table-wrapper">
+                        <table class="encoding-table">
+                            <thead>
+                                <tr>
+                                    <th>단어</th>
+                                    ${universalSet.map(w => `<th>${w}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>인덱스</strong></td>
+                                    ${universalSet.map((_, i) => `<td class="index-cell">${i}</td>`).join('')}
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            resultsContent.innerHTML = html;
+        }
+
+        init();
+    </script>
+</body>
+</html>
