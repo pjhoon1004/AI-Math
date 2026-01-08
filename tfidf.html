@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TF-IDF 구하기 - 텍스트 데이터의 이해</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/pretendard/1.3.9/static/pretendard.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #f5f7fa;
+            --bg-card: #ffffff;
+            --bg-input: #f8f9fc;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-purple: #8b5cf6;
+            --accent-green: #10b981;
+            --accent-orange: #f97316;
+            --accent-pink: #ec4899;
+            --accent-red: #ef4444;
+            --accent-yellow: #eab308;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; padding: 40px 20px; }
+
+        header { text-align: center; margin-bottom: 40px; }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(236, 72, 153, 0.15));
+            border: 1px solid rgba(249, 115, 22, 0.3);
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--accent-orange);
+            margin-bottom: 16px;
+        }
+
+        h1 {
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, #f97316 0%, #ec4899 50%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+        }
+
+        .subtitle { font-size: 1rem; color: var(--text-secondary); max-width: 700px; margin: 0 auto; }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title .icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .card-title .icon.blue { background: rgba(59, 130, 246, 0.15); }
+        .card-title .icon.orange { background: rgba(249, 115, 22, 0.15); }
+
+        /* Document Input */
+        .documents-container { display: flex; flex-direction: column; gap: 12px; }
+
+        .document-input {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .doc-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 70px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-pink));
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 13px;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .doc-textarea {
+            flex: 1;
+            min-height: 60px;
+            padding: 12px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+
+        .doc-textarea:focus {
+            outline: none;
+            border-color: var(--accent-orange);
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+        }
+
+        .delete-btn {
+            width: 40px;
+            height: 40px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 10px;
+            color: #ef4444;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .delete-btn:hover { background: rgba(239, 68, 68, 0.2); }
+        .delete-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-pink));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent-orange);
+        }
+
+        .btn-add {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px dashed rgba(16, 185, 129, 0.4);
+            color: var(--accent-green);
+            width: 100%;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .btn-add:hover { background: rgba(16, 185, 129, 0.2); }
+
+        .button-group { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+        /* Options */
+        .options-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 16px;
+            padding: 16px;
+            background: var(--bg-input);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .option-group { display: flex; align-items: center; gap: 12px; }
+
+        .option-label {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .checkbox-wrapper input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-orange);
+            cursor: pointer;
+        }
+
+        select {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+
+        input[type="text"] {
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent-orange);
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+        }
+
+        /* Step Flow */
+        .step-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-input);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .step-item.active {
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-pink));
+            color: white;
+            border-color: transparent;
+        }
+
+        .step-arrow { color: var(--text-secondary); font-size: 18px; }
+
+        /* Result Sections */
+        .result-section { margin-bottom: 32px; }
+        .result-section:last-child { margin-bottom: 0; }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .step-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: white;
+        }
+
+        .step-number.step1 { background: var(--accent-blue); }
+        .step-number.step2 { background: var(--accent-cyan); }
+        .step-number.step3 { background: var(--accent-purple); }
+        .step-number.step4 { background: var(--accent-green); }
+        .step-number.step5 { background: var(--accent-pink); }
+
+        .section-title { font-size: 1rem; font-weight: 700; }
+
+        /* Document Display */
+        .doc-display { display: flex; flex-direction: column; gap: 12px; }
+
+        .doc-item {
+            padding: 14px 18px;
+            background: var(--bg-input);
+            border-radius: 10px;
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        .doc-item-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--accent-blue);
+            margin-bottom: 6px;
+        }
+
+        .doc-item-text { font-size: 14px; color: var(--text-primary); }
+
+        /* Set Display */
+        .set-container { display: flex; flex-direction: column; gap: 16px; }
+
+        .set-item {
+            padding: 16px 18px;
+            background: var(--bg-input);
+            border-radius: 10px;
+            border-left: 4px solid var(--accent-cyan);
+        }
+
+        .set-item.universal {
+            border-left-color: var(--accent-green);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .set-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .set-label {
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .set-notation {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+            font-size: 18px;
+            color: var(--accent-cyan);
+        }
+
+        .set-item.universal .set-notation { color: var(--accent-green); }
+
+        .set-count {
+            font-size: 12px;
+            padding: 4px 10px;
+            background: rgba(6, 182, 212, 0.1);
+            border-radius: 20px;
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        .set-item.universal .set-count {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent-green);
+        }
+
+        .set-elements { display: flex; flex-wrap: wrap; gap: 8px; }
+
+        .element-tag {
+            padding: 6px 12px;
+            background: white;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--accent-cyan);
+        }
+
+        .set-item.universal .element-tag {
+            border-color: rgba(16, 185, 129, 0.3);
+            color: var(--accent-green);
+        }
+
+        /* Tables */
+        .table-wrapper { overflow-x: auto; margin-bottom: 16px; }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            min-width: 500px;
+        }
+
+        .data-table th, .data-table td {
+            padding: 10px 8px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.08), rgba(236, 72, 153, 0.08));
+            font-weight: 600;
+            font-size: 12px;
+            position: sticky;
+            top: 0;
+        }
+
+        .data-table td { background: white; }
+
+        .data-table .label-cell {
+            background: var(--bg-input);
+            font-weight: 600;
+            text-align: left;
+            padding-left: 12px;
+            position: sticky;
+            left: 0;
+            z-index: 1;
+        }
+
+        .data-table .highlight {
+            background: rgba(249, 115, 22, 0.15);
+            color: var(--accent-orange);
+            font-weight: 700;
+        }
+
+        .data-table .highlight-green {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+            font-weight: 700;
+        }
+
+        .data-table .highlight-purple {
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--accent-purple);
+            font-weight: 700;
+        }
+
+        .data-table .highlight-pink {
+            background: rgba(236, 72, 153, 0.15);
+            color: var(--accent-pink);
+            font-weight: 700;
+        }
+
+        .data-table .highlight-cyan {
+            background: rgba(6, 182, 212, 0.15);
+            color: var(--accent-cyan);
+            font-weight: 700;
+        }
+
+        .data-table .highlight-yellow {
+            background: rgba(234, 179, 8, 0.15);
+            color: #a16207;
+            font-weight: 700;
+        }
+
+        .data-table .zero-cell {
+            color: #cbd5e1;
+        }
+
+        .data-table .section-header-cell {
+            background: rgba(100, 116, 139, 0.1);
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        /* Info Box */
+        .info-box {
+            padding: 14px 18px;
+            background: rgba(249, 115, 22, 0.08);
+            border: 1px solid rgba(249, 115, 22, 0.2);
+            border-radius: 10px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .info-box strong { color: var(--accent-orange); }
+
+        .info-box.blue {
+            background: rgba(59, 130, 246, 0.08);
+            border-color: rgba(59, 130, 246, 0.2);
+        }
+        .info-box.blue strong { color: var(--accent-blue); }
+
+        .info-box.purple {
+            background: rgba(139, 92, 246, 0.08);
+            border-color: rgba(139, 92, 246, 0.2);
+        }
+        .info-box.purple strong { color: var(--accent-purple); }
+
+        .info-box.green {
+            background: rgba(16, 185, 129, 0.08);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+        .info-box.green strong { color: var(--accent-green); }
+
+        .info-box.pink {
+            background: rgba(236, 72, 153, 0.08);
+            border-color: rgba(236, 72, 153, 0.2);
+        }
+        .info-box.pink strong { color: var(--accent-pink); }
+
+        .info-box.cyan {
+            background: rgba(6, 182, 212, 0.08);
+            border-color: rgba(6, 182, 212, 0.2);
+        }
+        .info-box.cyan strong { color: var(--accent-cyan); }
+
+        /* Formula Box */
+        .formula-box {
+            background: var(--bg-input);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .formula {
+            font-family: 'Times New Roman', serif;
+            font-size: 18px;
+            color: var(--text-primary);
+        }
+
+        .formula sub { font-size: 12px; }
+
+        /* Sub-step Box */
+        .substep-box {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .substep-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .substep-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .substep-badge.step-a { background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); }
+        .substep-badge.step-b { background: rgba(234, 179, 8, 0.15); color: #a16207; }
+        .substep-badge.step-c { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+
+        /* Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .summary-card {
+            padding: 16px;
+            background: var(--bg-input);
+            border-radius: 12px;
+            text-align: center;
+            border-left: 4px solid;
+        }
+
+        .summary-card.tf { border-left-color: var(--accent-purple); }
+        .summary-card.idf { border-left-color: var(--accent-green); }
+        .summary-card.tfidf { border-left-color: var(--accent-pink); }
+
+        .summary-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .summary-word {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .summary-card.tf .summary-word { color: var(--accent-purple); }
+        .summary-card.idf .summary-word { color: var(--accent-green); }
+        .summary-card.tfidf .summary-word { color: var(--accent-pink); }
+
+        .summary-value {
+            font-size: 24px;
+            font-weight: 800;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 20px 15px; }
+            .document-input { flex-wrap: wrap; }
+            .doc-label { min-width: 60px; }
+            .button-group { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
+            .step-flow { gap: 4px; }
+            .step-item { padding: 6px 12px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="badge">인공지능 수학</div>
+            <h1>TF-IDF 구하기</h1>
+            <p class="subtitle">텍스트 데이터에서 TF-IDF를 이용해서 중요한 단어를 찾는 방법에 대해 알아봅시다</p>
+        </header>
+
+        <!-- Input Section -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <div class="icon orange">📝</div>
+                    문서 입력
+                </div>
+            </div>
+
+            <div class="documents-container" id="documentsContainer"></div>
+
+            <button class="btn btn-add" id="addDocBtn">
+                <span>+</span> 문서 추가
+            </button>
+
+            <div class="options-section">
+                <div class="option-row" style="width: 100%; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
+                    <div class="option-group">
+                        <span class="option-label">📐 IDF 계산 방식:</span>
+                        <select id="idfMethod">
+                            <option value="simple">n / DF (단순 역수)</option>
+                            <option value="log">log₁₀(n / DF) (상용로그)</option>
+                        </select>
+                    </div>
+                    <div class="option-group">
+                        <span class="option-label">🏆 핵심 단어 개수:</span>
+                        <select id="topNWords">
+                            <option value="2">상위 2개</option>
+                            <option value="3" selected>상위 3개</option>
+                            <option value="4">상위 4개</option>
+                            <option value="5">상위 5개</option>
+                            <option value="6">상위 6개</option>
+                            <option value="7">상위 7개</option>
+                            <option value="8">상위 8개</option>
+                            <option value="9">상위 9개</option>
+                            <option value="10">상위 10개</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="stopword-section" style="width: 100%; margin-top: 12px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+                    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
+                        <div class="option-group" style="flex-shrink: 0;">
+                            <span class="option-label">⚙️ 불용어 설정</span>
+                            <label class="checkbox-wrapper">
+                                <input type="checkbox" id="removeStopwords">
+                                <span>불용어 제거 적용</span>
+                            </label>
+                        </div>
+                        <div class="option-group" style="flex: 1; min-width: 300px;">
+                            <span class="option-label">🚫 불용어 목록 (쉼표로 구분)</span>
+                            <input type="text" id="stopwordList" 
+                                   value="은, 는, 이, 가, 을, 를, 의, 에, 와, 과, 도, 로, 으로, 에서, 까지, 부터, 이다, 이며"
+                                   placeholder="불용어를 쉼표로 구분하여 입력"
+                                   style="width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" id="analyzeBtn">
+                    <span>🔍</span> 분석하기
+                </button>
+                <button class="btn btn-secondary" id="resetBtn">
+                    <span>↺</span> 초기화
+                </button>
+                <button class="btn btn-secondary" id="exampleBtn">
+                    <span>📋</span> 예시 불러오기
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="card" id="resultsCard" style="display: none;">
+            <div class="step-flow">
+                <div class="step-item active">1. 문서</div>
+                <span class="step-arrow">→</span>
+                <div class="step-item active">2. 단어집합</div>
+                <span class="step-arrow">→</span>
+                <div class="step-item active">3. TF</div>
+                <span class="step-arrow">→</span>
+                <div class="step-item active">4. IDF</div>
+                <span class="step-arrow">→</span>
+                <div class="step-item active">5. TF-IDF</div>
+            </div>
+
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let documents = [
+            { id: 1, text: '' },
+            { id: 2, text: '' },
+            { id: 3, text: '' }
+        ];
+        let nextId = 4;
+
+        // DOM Elements
+        const documentsContainer = document.getElementById('documentsContainer');
+        const addDocBtn = document.getElementById('addDocBtn');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const exampleBtn = document.getElementById('exampleBtn');
+        const idfMethodSelect = document.getElementById('idfMethod');
+        const topNWordsSelect = document.getElementById('topNWords');
+        const removeStopwordsCheckbox = document.getElementById('removeStopwords');
+        const stopwordListInput = document.getElementById('stopwordList');
+        const resultsCard = document.getElementById('resultsCard');
+        const resultsContent = document.getElementById('resultsContent');
+
+        function init() {
+            renderDocuments();
+            addEventListeners();
+        }
+
+        function renderDocuments() {
+            documentsContainer.innerHTML = '';
+            documents.forEach((doc, index) => {
+                const div = document.createElement('div');
+                div.className = 'document-input';
+                div.innerHTML = `
+                    <div class="doc-label">문서 ${String.fromCharCode(65 + index)}</div>
+                    <textarea class="doc-textarea" data-id="${doc.id}" 
+                              placeholder="문서 ${String.fromCharCode(65 + index)}의 내용을 입력하세요...">${doc.text}</textarea>
+                    <button class="delete-btn" data-id="${doc.id}" ${documents.length <= 2 ? 'disabled' : ''}>×</button>
+                `;
+                documentsContainer.appendChild(div);
+            });
+        }
+
+        function addEventListeners() {
+            addDocBtn.addEventListener('click', () => {
+                documents.push({ id: nextId++, text: '' });
+                renderDocuments();
+            });
+
+            analyzeBtn.addEventListener('click', analyze);
+            resetBtn.addEventListener('click', reset);
+            exampleBtn.addEventListener('click', loadExample);
+
+            documentsContainer.addEventListener('input', (e) => {
+                if (e.target.classList.contains('doc-textarea')) {
+                    const id = parseInt(e.target.dataset.id);
+                    const doc = documents.find(d => d.id === id);
+                    if (doc) doc.text = e.target.value;
+                }
+            });
+
+            documentsContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-btn') && !e.target.disabled) {
+                    const id = parseInt(e.target.dataset.id);
+                    if (documents.length > 2) {
+                        documents = documents.filter(d => d.id !== id);
+                        renderDocuments();
+                    }
+                }
+            });
+        }
+
+        function reset() {
+            documents = [{ id: 1, text: '' }, { id: 2, text: '' }, { id: 3, text: '' }];
+            nextId = 4;
+            renderDocuments();
+            resultsCard.style.display = 'none';
+        }
+
+        function loadExample() {
+            documents = [
+                { id: 1, text: '인공지능은 수학을 사용한다. 수학은 인공지능의 핵심이다. 그래서 인공지능은 아주 똑똑하다.' },
+                { id: 2, text: '데이터는 수학을 사용한다. 수학은 데이터의 기초이다. 그래서 데이터는 아주 유용하다.' },
+                { id: 3, text: '문장은 단어로 이루어진다. 단어는 의미를 표현한다. 그래서 문장은 의미를 전달한다.' }
+            ];
+            nextId = 4;
+            renderDocuments();
+            analyze();
+        }
+
+        // Text Processing
+        function getStopwords() {
+            const text = stopwordListInput.value;
+            return text.split(',').map(w => w.trim()).filter(w => w.length > 0);
+        }
+
+        function removeStopwordsFromWord(word, stopwords) {
+            let result = word;
+            let changed = true;
+            
+            // 반복적으로 단어 끝에서 불용어(조사) 제거
+            while (changed) {
+                changed = false;
+                for (const sw of stopwords) {
+                    if (result.length > sw.length && result.endsWith(sw)) {
+                        result = result.slice(0, -sw.length);
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+            
+            return result;
+        }
+
+        function tokenize(text, removeStopwordsFlag = false) {
+            const cleaned = text.replace(/[.,!?;:'"()[\]{}]/g, ' ');
+            let tokens = cleaned.split(/\s+/).filter(w => w.length > 0);
+            
+            if (removeStopwordsFlag) {
+                const stopwords = getStopwords();
+                // 긴 불용어부터 처리하도록 정렬
+                const sortedStopwords = [...stopwords].sort((a, b) => b.length - a.length);
+                tokens = tokens.map(w => removeStopwordsFromWord(w, sortedStopwords)).filter(w => w.length > 0);
+            }
+            
+            return tokens;
+        }
+
+        function tokenizeWithInfo(text, removeStopwordsFlag = false) {
+            const cleaned = text.replace(/[.,!?;:'"()[\]{}]/g, ' ');
+            const allTokens = cleaned.split(/\s+/).filter(w => w.length > 0);
+            const stopwords = getStopwords();
+            const sortedStopwords = [...stopwords].sort((a, b) => b.length - a.length);
+            
+            const tokenInfo = allTokens.map(w => {
+                const processed = removeStopwordsFromWord(w, sortedStopwords);
+                const removedPart = w.slice(processed.length);
+                return {
+                    original: w,
+                    word: processed,
+                    removedSuffix: removedPart,
+                    hasStopword: removedPart.length > 0
+                };
+            });
+            
+            const filteredTokens = removeStopwordsFlag 
+                ? tokenInfo.map(t => t.word).filter(w => w.length > 0)
+                : allTokens;
+            
+            return { tokenInfo, filteredTokens };
+        }
+
+        function getUniqueWords(words) {
+            return [...new Set(words)];
+        }
+
+        function countFrequency(words) {
+            const freq = {};
+            words.forEach(w => {
+                freq[w] = (freq[w] || 0) + 1;
+            });
+            return freq;
+        }
+
+        // Main Analysis
+        function analyze() {
+            const idfMethod = idfMethodSelect.value;
+            const topN = parseInt(topNWordsSelect.value);
+            const removeStopwords = removeStopwordsCheckbox.checked;
+            const n = documents.filter(d => d.text.trim()).length;
+
+            const docData = [];
+            let allWords = [];
+
+            documents.forEach((doc, index) => {
+                if (doc.text.trim()) {
+                    const label = String.fromCharCode(65 + index);
+                    const { tokenInfo, filteredTokens } = tokenizeWithInfo(doc.text, removeStopwords);
+                    const uniqueWords = getUniqueWords(filteredTokens);
+                    const frequency = countFrequency(filteredTokens);
+
+                    docData.push({
+                        label,
+                        originalText: doc.text,
+                        tokenInfo,
+                        tokens: filteredTokens,
+                        set: uniqueWords,
+                        frequency
+                    });
+
+                    allWords = allWords.concat(filteredTokens);
+                }
+            });
+
+            if (docData.length < 2) {
+                alert('최소 2개 이상의 문서를 입력해주세요.');
+                return;
+            }
+
+            const universalSet = getUniqueWords(allWords).sort((a, b) => a.localeCompare(b, 'ko'));
+
+            // Calculate DF for each word
+            const dfData = {};
+            universalSet.forEach(word => {
+                dfData[word] = docData.filter(d => d.set.includes(word)).length;
+            });
+
+            // Calculate DF/n (상대도수)
+            const dfRatioData = {};
+            universalSet.forEach(word => {
+                dfRatioData[word] = dfData[word] / n;
+            });
+
+            // Calculate n/DF
+            const nDivDfData = {};
+            universalSet.forEach(word => {
+                nDivDfData[word] = n / dfData[word];
+            });
+
+            // Calculate IDF
+            const idfData = {};
+            universalSet.forEach(word => {
+                if (idfMethod === 'log') {
+                    idfData[word] = Math.log10(n / dfData[word]);
+                } else {
+                    idfData[word] = n / dfData[word];
+                }
+            });
+
+            // Calculate TF-IDF for each document
+            docData.forEach(d => {
+                d.tfidf = {};
+                universalSet.forEach(word => {
+                    const tf = d.frequency[word] || 0;
+                    d.tfidf[word] = tf * idfData[word];
+                });
+            });
+
+            renderResults(docData, universalSet, dfData, dfRatioData, nDivDfData, idfData, n, idfMethod, removeStopwords, topN);
+        }
+
+        function renderResults(docData, universalSet, dfData, dfRatioData, nDivDfData, idfData, n, idfMethod, removeStopwords, topN) {
+            resultsCard.style.display = 'block';
+
+            let html = '';
+
+            // Step 1: 원본 문서
+            html += `
+                <div class="result-section">
+                    <div class="section-header">
+                        <div class="step-number step1">1</div>
+                        <div class="section-title">문서</div>
+                    </div>
+                    <div class="info-box blue">
+                        <strong>💡 문서 입력:</strong> 분석할 문서들입니다. 조사까지 포함하여 토큰 단위로 분리합니다.
+                        ${removeStopwords ? '<br><span style="color: var(--accent-red);">※ 불용어 제거가 적용되었습니다. <s>취소선</s> 표시된 단어는 분석에서 제외됩니다.</span>' : ''}
+                    </div>
+                    <div class="doc-display">
+                        ${docData.map(d => `
+                            <div class="doc-item">
+                                <div class="doc-item-label">문서 ${d.label}</div>
+                                <div class="doc-item-text">"${d.originalText}"</div>
+                                ${removeStopwords ? `
+                                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+                                    <span style="font-size: 12px; color: var(--text-secondary);">토큰: </span>
+                                    ${d.tokenInfo.map(t => t.hasStopword 
+                                        ? `<span style="margin-right: 6px;"><span style="color: var(--accent-blue);">${t.word}</span><span style="text-decoration: line-through; color: #94a3b8;">${t.removedSuffix}</span></span>` 
+                                        : `<span style="color: var(--accent-blue); margin-right: 6px;">${t.original}</span>`
+                                    ).join('')}
+                                </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="info-box" style="margin-top: 16px;">
+                        <strong>📌 조건:</strong> 문서 수 n = ${n}${removeStopwords ? ', 불용어 제거 적용됨' : ', 단어 분리 후 조사도 하나의 토큰으로 포함'}
+                    </div>
+                </div>
+            `;
+
+            // Step 2: 단어집합
+            html += `
+                <div class="result-section">
+                    <div class="section-header">
+                        <div class="step-number step2">2</div>
+                        <div class="section-title">단어집합</div>
+                    </div>
+                    <div class="info-box cyan">
+                        <strong>💡 단어집합:</strong> 각 문서를 단어로 분리하여 단어를 원소로 하는 집합을 만듭니다. 전체집합 U는 모든 문서의 단어를 합친 것입니다.
+                    </div>
+                    <div class="set-container">
+                        ${docData.map(d => `
+                            <div class="set-item">
+                                <div class="set-header">
+                                    <div class="set-label">
+                                        <span class="set-notation">${d.label}</span>
+                                        <span>= 문서 ${d.label}의 단어집합</span>
+                                    </div>
+                                    <span class="set-count">${d.set.length}개</span>
+                                </div>
+                                <div class="set-elements">
+                                    ${d.set.map(w => `<span class="element-tag">${w}</span>`).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                        <div class="set-item universal">
+                            <div class="set-header">
+                                <div class="set-label">
+                                    <span class="set-notation">U</span>
+                                    <span>= 전체집합 (합집합)</span>
+                                </div>
+                                <span class="set-count">${universalSet.length}개</span>
+                            </div>
+                            <div class="set-elements">
+                                ${universalSet.map(w => `<span class="element-tag">${w}</span>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Step 3: TF (Term Frequency)
+            html += `
+                <div class="result-section">
+                    <div class="section-header">
+                        <div class="step-number step3">3</div>
+                        <div class="section-title">TF 구하기 (단어 빈도수)</div>
+                    </div>
+                    <div class="info-box purple">
+                        <strong>💡 TF(Term Frequency):</strong> 각 문서에서 단어가 몇 번 등장했는지 세는 것입니다.
+                    </div>
+                    <div class="formula-box">
+                        <div class="formula">TF(t, d) = 문서 d에서 단어 t의 등장 횟수</div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    ${universalSet.map(word => `<th>${word}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${docData.map(d => `
+                                    <tr>
+                                        <td class="label-cell">TF(${d.label})</td>
+                                        ${universalSet.map(word => {
+                                            const val = d.frequency[word] || 0;
+                                            return `<td class="${val >= 2 ? 'highlight-purple' : val === 0 ? 'zero-cell' : ''}">${val}</td>`;
+                                        }).join('')}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="info-box purple" style="margin-top: 16px;">
+                        <strong>📌 TF 해석:</strong> TF 값이 높다(2 이상)는 것은 해당 단어가 문서 안에서 여러 번 반복되어 등장한다는 것을 의미합니다. 
+                        그러나 TF가 높다고 해서 항상 중요한 단어는 아닙니다. 조사나 공통 단어도 TF가 높게 나타날 수 있기 때문입니다.
+                    </div>
+                </div>
+            `;
+
+            // Step 4: IDF (with substeps)
+            html += `
+                <div class="result-section">
+                    <div class="section-header">
+                        <div class="step-number step4">4</div>
+                        <div class="section-title">IDF 구하기 (역문서 빈도)</div>
+                    </div>
+                    <div class="info-box green">
+                        <strong>💡 IDF(Inverse Document Frequency):</strong> 단어가 전체 문서에서 얼마나 희귀한지를 나타냅니다. 
+                        모든 문서에 등장하는 단어는 IDF가 낮고, 특정 문서에만 등장하는 단어는 IDF가 높습니다.
+                    </div>
+                    
+                    <!-- Substep A: DF -->
+                    <div class="substep-box">
+                        <div class="substep-title">
+                            <span class="substep-badge step-a">① DF</span>
+                            <span>문서빈도수 (Document Frequency)</span>
+                        </div>
+                        <div class="formula-box" style="margin-bottom: 12px;">
+                            <div class="formula">DF(t) = 단어 t가 등장하는 문서의 개수</div>
+                        </div>
+                        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">
+                            → 단어가 얼마나 보편적으로 자주 등장했는가?
+                        </p>
+                    </div>
+                    
+                    <!-- Substep B: DF/n (상대도수) -->
+                    <div class="substep-box">
+                        <div class="substep-title">
+                            <span class="substep-badge step-b">② DF/n</span>
+                            <span>상대도수</span>
+                        </div>
+                        <div class="formula-box" style="margin-bottom: 12px;">
+                            <div class="formula">DF/n = 문서 전체에서의 상대도수 (n = ${n})</div>
+                        </div>
+                        <p style="font-size: 13px; color: var(--text-secondary);">
+                            → DF/n = 1 이면 모든 문서에 등장, DF/n = 1/${n} 이면 하나의 문서에만 등장<br>
+                            → DF/n 값이 1에 가까울수록 흔한 단어, 0에 가까울수록 희귀한 단어
+                        </p>
+                    </div>
+                    
+                    <!-- Substep C: IDF -->
+                    <div class="substep-box">
+                        <div class="substep-title">
+                            <span class="substep-badge step-c">③ IDF</span>
+                            <span>역문서 빈도수</span>
+                        </div>
+                        <div class="formula-box" style="margin-bottom: 12px;">
+                            <div class="formula">
+                                IDF(t) = n / DF(t) ${idfMethod === 'log' ? '&nbsp;&nbsp;또는&nbsp;&nbsp; IDF(t) = log₁₀(n / DF(t))' : ''}
+                            </div>
+                        </div>
+                        <p style="font-size: 13px; color: var(--text-secondary);">
+                            → DF가 크면 IDF가 작아짐 (흔한 단어 = 덜 중요)<br>
+                            → DF가 작으면 IDF가 커짐 (희귀한 단어 = 더 중요)
+                        </p>
+                    </div>
+                    
+                    <!-- Combined IDF Table -->
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    ${universalSet.map(word => `<th>${word}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${docData.map(d => `
+                                    <tr>
+                                        <td class="label-cell">TF(${d.label})</td>
+                                        ${universalSet.map(word => {
+                                            const tf = d.frequency[word] || 0;
+                                            return `<td class="${tf === 0 ? 'zero-cell' : ''}">${tf}</td>`;
+                                        }).join('')}
+                                    </tr>
+                                `).join('')}
+                                <tr>
+                                    <td class="label-cell" style="background: rgba(6, 182, 212, 0.15);">DF</td>
+                                    ${universalSet.map(word => {
+                                        const df = dfData[word];
+                                        return `<td class="highlight-cyan">${df}</td>`;
+                                    }).join('')}
+                                </tr>
+                                <tr>
+                                    <td class="label-cell" style="background: rgba(234, 179, 8, 0.15);">DF/n</td>
+                                    ${universalSet.map(word => {
+                                        const df = dfData[word];
+                                        return `<td class="highlight-yellow">${df === n ? '1' : df + '/' + n}</td>`;
+                                    }).join('')}
+                                </tr>
+                                <tr>
+                                    <td class="label-cell" style="background: rgba(16, 185, 129, 0.15);">IDF${idfMethod === 'log' ? ' (log)' : ''}</td>
+                                    ${universalSet.map(word => {
+                                        const df = dfData[word];
+                                        const idf = idfData[word];
+                                        const isCommon = df === n;
+                                        const isRare = df === 1;
+                                        return `<td class="${isRare ? 'highlight-green' : isCommon ? 'zero-cell' : ''}">${idf.toFixed(2)}</td>`;
+                                    }).join('')}
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="info-box green" style="margin-top: 16px;">
+                        <strong>📌 IDF 해석:</strong><br>
+                        • DF=${n}인 단어(모든 문서에 등장)는 IDF가 ${idfMethod === 'log' ? '0' : '1'}으로 가장 낮습니다.<br>
+                        • DF=1인 단어(하나의 문서에만 등장)는 IDF가 ${idfMethod === 'log' ? Math.log10(n).toFixed(2) : n}으로 가장 높습니다.<br>
+                        • IDF는 많은 문서에 등장하는 단어의 가중치는 낮추고, 적은 문서에만 등장하는 단어의 가중치는 높이는 지표입니다.
+                    </div>
+                </div>
+            `;
+
+            // Step 5: TF-IDF
+            html += `
+                <div class="result-section">
+                    <div class="section-header">
+                        <div class="step-number step5">5</div>
+                        <div class="section-title">TF-IDF 구하기</div>
+                    </div>
+                    <div class="info-box pink">
+                        <strong>💡 TF-IDF:</strong> TF와 IDF를 곱한 값으로, 해당 문서에서 단어가 얼마나 중요한지를 나타냅니다. 
+                        문서 내에서 자주 등장하면서(TF↑) 다른 문서에서는 드물게 등장하는(IDF↑) 단어가 높은 TF-IDF 값을 가집니다.
+                    </div>
+                    <div class="formula-box">
+                        <div class="formula">TF-IDF(t, d) = TF(t, d) × IDF(t)</div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    ${universalSet.map(word => `<th>${word}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${docData.map(d => `
+                                    <tr>
+                                        <td class="label-cell">TF(${d.label})</td>
+                                        ${universalSet.map(word => {
+                                            const tf = d.frequency[word] || 0;
+                                            return `<td class="${tf >= 2 ? 'highlight-purple' : tf === 0 ? 'zero-cell' : ''}">${tf}</td>`;
+                                        }).join('')}
+                                    </tr>
+                                `).join('')}
+                                <tr>
+                                    <td class="label-cell">DF</td>
+                                    ${universalSet.map(word => `<td>${dfData[word]}</td>`).join('')}
+                                </tr>
+                                <tr>
+                                    <td class="label-cell">DF/n</td>
+                                    ${universalSet.map(word => {
+                                        const df = dfData[word];
+                                        return `<td>${df === n ? '1' : df + '/' + n}</td>`;
+                                    }).join('')}
+                                </tr>
+                                <tr>
+                                    <td class="label-cell">IDF</td>
+                                    ${universalSet.map(word => `<td>${idfData[word].toFixed(2)}</td>`).join('')}
+                                </tr>
+                                ${docData.map(d => `
+                                    <tr>
+                                        <td class="label-cell" style="background: rgba(236, 72, 153, 0.15);">TF-IDF(${d.label})</td>
+                                        ${universalSet.map(word => {
+                                            const tfidf = d.tfidf[word];
+                                            const maxTfidf = Math.max(...docData.map(doc => doc.tfidf[word]));
+                                            const isMax = tfidf === maxTfidf && tfidf > 0;
+                                            return `<td class="${isMax && tfidf > 1 ? 'highlight-pink' : tfidf === 0 ? 'zero-cell' : ''}">${tfidf.toFixed(2)}</td>`;
+                                        }).join('')}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="margin-top: 24px;">
+                        <div style="font-weight: 700; font-size: 15px; margin-bottom: 16px; color: var(--accent-pink);">🏆 각 문서별 핵심 단어 (TF-IDF 상위 ${topN}개)</div>
+                        <div class="summary-grid">
+                            ${docData.map(d => {
+                                const sorted = Object.entries(d.tfidf)
+                                    .filter(([_, val]) => val > 0)
+                                    .sort((a, b) => b[1] - a[1])
+                                    .slice(0, topN);
+                                return `
+                                    <div style="background: var(--bg-input); border-radius: 12px; padding: 16px; border-left: 4px solid var(--accent-pink);">
+                                        <div style="font-weight: 700; color: var(--accent-pink); margin-bottom: 12px;">문서 ${d.label}</div>
+                                        ${sorted.length > 0 ? sorted.map(([word, val], i) => `
+                                            <div style="display: flex; justify-content: space-between; padding: 6px 0; ${i < sorted.length - 1 ? 'border-bottom: 1px solid var(--border-color);' : ''}">
+                                                <span style="font-weight: 600;">${i + 1}. ${word}</span>
+                                                <span style="color: var(--accent-pink); font-weight: 700;">${val.toFixed(2)}</span>
+                                            </div>
+                                        `).join('') : '<div style="color: var(--text-secondary); font-size: 13px;">표시할 단어가 없습니다.</div>'}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="info-box pink" style="margin-top: 20px;">
+                        <strong>📌 TF-IDF 결과 해석:</strong><br>
+                        • TF-IDF 값이 높은 단어는 해당 문서의 <strong>핵심 단어</strong>입니다.<br>
+                        • TF-IDF 값이 0인 단어는 해당 문서에 등장하지 않거나, 모든 문서에 공통으로 등장하여 구별력이 없는 단어입니다.<br>
+                        • "그래서"와 같이 모든 문서에 등장하는 단어(DF=${n})는 IDF가 ${idfMethod === 'log' ? '0이 되어 TF-IDF도 0' : '1이 되어 TF-IDF가 TF와 같아'}집니다.<br>
+                        • 이 표는 TF-IDF가 단순히 많이 등장한 단어가 아니라, <strong>특정 문서에서만 특징적으로 나타나는 단어</strong>를 강조하는 지표임을 보여줍니다.
+                    </div>
+                </div>
+            `;
+
+            resultsContent.innerHTML = html;
+        }
+
+        init();
+    </script>
+</body>
+</html>
