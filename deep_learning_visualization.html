@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>딥러닝은 어떻게 학습할까? 🧠</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0ea5e9;
+            --primary-dark: #0284c7;
+            --secondary: #f59e0b;
+            --accent: #ec4899;
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-light: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --success: #10b981;
+            --error: #ef4444;
+            --shadow: rgba(0, 0, 0, 0.08);
+            --border: #e2e8f0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: var(--bg-main);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Decorative background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(14, 165, 233, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(245, 158, 11, 0.02) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .content-grid.single {
+            grid-template-columns: 1fr;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 2px 8px var(--shadow);
+            border: 1px solid var(--border);
+            animation: fadeInUp 0.6s ease-out;
+            animation-fill-mode: both;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px var(--shadow);
+        }
+
+        .card:nth-child(2) { animation-delay: 0.05s; }
+        .card:nth-child(3) { animation-delay: 0.1s; }
+        .card:nth-child(4) { animation-delay: 0.15s; }
+        .card:nth-child(5) { animation-delay: 0.2s; }
+
+        h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: var(--primary);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: white;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
+        }
+
+        .description {
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        /* Neural Network Visualization */
+        .neural-network {
+            position: relative;
+            height: 300px;
+            background: var(--bg-light);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 20px 0;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .neural-network canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Interactive Controls */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin: 20px 0;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-value {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--secondary);
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+            transition: transform 0.2s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+            border: none;
+        }
+
+        /* Button Styles */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(14, 165, 233, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        /* Loss Graph */
+        .loss-graph {
+            background: var(--bg-light);
+            border-radius: 12px;
+            padding: 20px;
+            height: 280px;
+            position: relative;
+            margin: 20px 0;
+            border: 1px solid var(--border);
+        }
+
+        .loss-graph canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Info Box */
+        .info-box {
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.05), rgba(245, 158, 11, 0.05));
+            border-left: 3px solid var(--secondary);
+            padding: 16px;
+            border-radius: 10px;
+            margin: 16px 0;
+            transition: all 0.3s ease;
+        }
+
+        .info-box h3 {
+            color: var(--secondary);
+            margin-bottom: 8px;
+            font-size: 1rem;
+            transition: color 0.3s ease;
+        }
+
+        .info-box p {
+            line-height: 1.7;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Formula */
+        .formula {
+            background: var(--bg-light);
+            padding: 18px;
+            border-radius: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            text-align: center;
+            color: var(--primary);
+            margin: 16px 0;
+            border: 1px solid var(--border);
+            overflow-x: auto;
+        }
+
+        /* Training Steps */
+        .training-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+
+        .step-card {
+            background: var(--bg-light);
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .step-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px var(--shadow);
+        }
+
+        .step-card.active {
+            border-color: var(--secondary);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(14, 165, 233, 0.08));
+        }
+
+        .step-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+
+        .step-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .step-title .expand-icon {
+            font-size: 0.9rem;
+            transition: transform 0.3s ease;
+        }
+
+        .step-card.active .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .step-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .step-detail {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            margin-top: 0;
+        }
+
+        .step-card.active .step-detail {
+            max-height: 300px;
+            margin-top: 16px;
+        }
+
+        .step-detail-content {
+            background: rgba(255, 255, 255, 0.5);
+            padding: 16px;
+            border-radius: 8px;
+            border-left: 3px solid var(--secondary);
+        }
+
+        .step-detail h4 {
+            color: var(--secondary);
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .step-detail p {
+            font-size: 0.85rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .step-detail ul {
+            list-style: none;
+            padding-left: 0;
+            margin-top: 8px;
+        }
+
+        .step-detail li {
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .step-detail li:before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        /* Results Display */
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+
+        .result-item {
+            background: var(--bg-light);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .result-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .result-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .loading {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .subtitle {
+                font-size: 0.9rem;
+            }
+
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            h2 {
+                font-size: 1.3rem;
+            }
+
+            .neural-network {
+                height: 250px;
+                padding: 16px;
+            }
+
+            .training-steps {
+                grid-template-columns: 1fr;
+            }
+
+            .loss-graph {
+                height: 240px;
+            }
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>딥러닝은 어떻게 학습할까? 🧠</h1>
+            <p class="subtitle">인공신경망이 오차를 줄이며 똑똑해지는 과정을 직접 체험해보세요</p>
+        </header>
+
+        <!-- Section 1: 학습의 기본 개념 -->
+        <div class="content-grid single">
+            <div class="card">
+                <h2><span class="step-number">1</span> 학습의 기본 개념</h2>
+                <p class="description">
+                    딥러닝에서 <strong>학습</strong>이란 <strong>오차를 줄이는 규칙</strong>을 찾는 것입니다. 
+                    오차는 실제값과 예측값의 차이를 의미하며, 인공신경망은 반복적으로 예측하고 오차를 계산하며 가중치를 조정합니다.
+                </p>
+
+                <div class="results">
+                    <div class="result-item">
+                        <div class="result-label">실제값</div>
+                        <div class="result-value" id="actual-value">80</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">예측값</div>
+                        <div class="result-value" id="predicted-value">60</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">오차</div>
+                        <div class="result-value" id="error-value" style="color: var(--error);">20</div>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h3>💡 핵심 개념</h3>
+                    <p>
+                        <strong>오차(Error)</strong> = 실제값(y) - 예측값(ŷ) | 
+                        학습의 목표는 이 오차를 최소화하는 것입니다.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: 학습 과정 -->
+        <div class="content-grid single">
+            <div class="card">
+                <h2><span class="step-number">2</span> 딥러닝의 3단계 학습 과정</h2>
+                <p class="description">
+                    딥러닝은 다음 3단계를 반복하며 학습합니다. 각 단계를 클릭하여 자세히 알아보세요!
+                </p>
+
+                <div class="training-steps">
+                    <div class="step-card" onclick="highlightStep(0)">
+                        <div class="step-icon">➡️</div>
+                        <div class="step-title">
+                            <span>① 순전파</span>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="step-desc">
+                            입력층 → 은닉층 → 출력층 방향으로 데이터가 전달되며 예측값을 계산합니다.
+                        </div>
+                        <div class="step-detail">
+                            <div class="step-detail-content">
+                                <h4>📝 상세 설명</h4>
+                                <p>순전파(Forward Propagation)는 신경망이 예측을 수행하는 단계입니다.</p>
+                                <ul>
+                                    <li>입력 데이터가 입력층으로 들어옵니다</li>
+                                    <li>각 층에서 가중치와 곱셈 후 활성함수를 통과합니다</li>
+                                    <li>최종적으로 출력층에서 예측값이 나옵니다</li>
+                                    <li>예: y = f(W₂ × f(W₁ × x + b₁) + b₂)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-card" onclick="highlightStep(1)">
+                        <div class="step-icon">📊</div>
+                        <div class="step-title">
+                            <span>② 손실 계산</span>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="step-desc">
+                            손실함수를 사용하여 실제값과 예측값의 차이(오차)를 계산합니다.
+                        </div>
+                        <div class="step-detail">
+                            <div class="step-detail-content">
+                                <h4>📝 상세 설명</h4>
+                                <p>손실 계산은 모델의 예측이 얼마나 정확한지 평가하는 단계입니다.</p>
+                                <ul>
+                                    <li>순전파로 얻은 예측값과 실제값을 비교합니다</li>
+                                    <li>손실함수를 사용해 오차를 수치화합니다</li>
+                                    <li>회귀: MSE = (1/n)Σ(y - ŷ)²</li>
+                                    <li>분류: Cross-Entropy Loss</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-card" onclick="highlightStep(2)">
+                        <div class="step-icon">⬅️</div>
+                        <div class="step-title">
+                            <span>③ 역전파 & 최적화</span>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="step-desc">
+                            오차를 줄이는 방향으로 가중치를 업데이트합니다.
+                        </div>
+                        <div class="step-detail">
+                            <div class="step-detail-content">
+                                <h4>📝 상세 설명</h4>
+                                <p>역전파(Backpropagation)는 오차를 기반으로 가중치를 조정하는 단계입니다.</p>
+                                <ul>
+                                    <li>출력층에서 입력층으로 오차를 역으로 전파합니다</li>
+                                    <li>경사하강법으로 손실을 최소화하는 방향을 찾습니다</li>
+                                    <li>학습률을 곱해 가중치를 업데이트합니다</li>
+                                    <li>W_new = W_old - learning_rate × ∂Loss/∂W</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h3>🔄 반복 학습</h3>
+                    <p>
+                        이 3단계를 수십~수만 번 반복하면서 오차가 충분히 작아질 때까지 계속 학습합니다. 각 반복을 <strong>"에포크(Epoch)"</strong>라고 부릅니다.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3 & 4: 손실함수와 최적화 -->
+        <div class="content-grid">
+            <!-- Section 3: 손실함수 -->
+            <div class="card">
+                <h2><span class="step-number">3</span> 손실함수</h2>
+                <p class="description">
+                    손실함수는 오차의 크기를 계산하는 함수입니다. 
+                    회귀에서는 <strong>평균제곱오차(MSE)</strong>를, 분류에서는 <strong>크로스 엔트로피</strong>를 사용합니다.
+                </p>
+
+                <div class="formula">
+                    MSE = (1/n) × Σ(실제값 - 예측값)²
+                </div>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>예측값 조절</span>
+                            <span class="control-value" id="pred-slider-value">60</span>
+                        </div>
+                        <input type="range" id="pred-slider" min="0" max="100" value="60" oninput="updatePrediction()">
+                    </div>
+                </div>
+
+                <div class="results">
+                    <div class="result-item">
+                        <div class="result-label">실제값</div>
+                        <div class="result-value">80</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">예측값</div>
+                        <div class="result-value" id="current-pred">60</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">손실</div>
+                        <div class="result-value" id="current-loss" style="color: var(--error);">400</div>
+                    </div>
+                </div>
+
+                <div class="loss-graph">
+                    <canvas id="lossCanvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Section 4: 최적화 알고리즘 -->
+            <div class="card">
+                <h2><span class="step-number">4</span> 최적화 알고리즘</h2>
+                <p class="description">
+                    최적화 알고리즘은 오차를 줄이는 방향으로 가중치를 업데이트하는 방법입니다.
+                </p>
+
+                <div class="formula">
+                    새 가중치 = 현재 가중치 + 변경값
+                </div>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>학습률 (Learning Rate)</span>
+                            <span class="control-value" id="lr-value">0.01</span>
+                        </div>
+                        <input type="range" id="lr-slider" min="1" max="100" value="1" oninput="updateLearningRate()">
+                    </div>
+                </div>
+
+                <div class="info-box" id="lr-info-box">
+                    <h3>⚠️ 학습률의 중요성</h3>
+                    <p id="lr-description">
+                        <strong>너무 크면</strong>: 최적 가중치를 지나칠 수 있습니다<br>
+                        <strong>너무 작으면</strong>: 학습 속도가 느립니다<br><br>
+                        슬라이더를 움직여 신경망의 변화를 확인하세요!
+                    </p>
+                </div>
+
+                <div class="neural-network">
+                    <canvas id="networkCanvas"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 5: 실시간 학습 시뮬레이션 -->
+        <div class="content-grid single">
+            <div class="card">
+                <h2><span class="step-number">5</span> 실시간 학습 시뮬레이션</h2>
+                <p class="description">
+                    실제로 신경망이 학습하는 과정을 시뮬레이션해봅시다! 버튼을 클릭하여 학습을 시작하고, 오차가 점점 줄어드는 것을 확인하세요.
+                </p>
+
+                <div class="btn-group">
+                    <button class="btn-primary" onclick="startTraining()">🚀 학습 시작</button>
+                    <button class="btn-primary" onclick="resetTraining()">🔄 초기화</button>
+                </div>
+
+                <div class="results" style="margin-top: 24px;">
+                    <div class="result-item">
+                        <div class="result-label">에포크</div>
+                        <div class="result-value" id="epoch">0</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">현재 손실</div>
+                        <div class="result-value" id="train-loss">0</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">정확도</div>
+                        <div class="result-value" id="accuracy" style="color: var(--success);">0%</div>
+                    </div>
+                </div>
+
+                <div class="loss-graph">
+                    <canvas id="trainingCanvas"></canvas>
+                </div>
+
+                <div class="info-box">
+                    <h3>🎯 학습 상태</h3>
+                    <p id="training-result">
+                        학습을 시작하려면 위의 "학습 시작" 버튼을 클릭하세요.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2025 딥러닝 학습 시각화 도구 | 교육용 목적으로 제작되었습니다</p>
+        </footer>
+    </div>
+
+    <script>
+        // Global variables
+        let isTraining = false;
+        let epoch = 0;
+        let currentLoss = 400;
+        let trainingHistory = [];
+        let maxEpochs = 100;
+        let learningRate = 0.01;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeLossGraph();
+            initializeNetworkVisualization();
+            initializeTrainingGraph();
+        });
+
+        // Step highlighting with toggle
+        function highlightStep(index) {
+            const steps = document.querySelectorAll('.step-card');
+            const clickedStep = steps[index];
+            
+            // Toggle the clicked step
+            if (clickedStep.classList.contains('active')) {
+                clickedStep.classList.remove('active');
+            } else {
+                // Remove active from all steps
+                steps.forEach(step => step.classList.remove('active'));
+                // Add active to clicked step
+                clickedStep.classList.add('active');
+            }
+        }
+
+        // Update prediction
+        function updatePrediction() {
+            const slider = document.getElementById('pred-slider');
+            const value = parseInt(slider.value);
+            const actualValue = 80;
+            const loss = Math.pow(actualValue - value, 2);
+
+            document.getElementById('pred-slider-value').textContent = value;
+            document.getElementById('current-pred').textContent = value;
+            document.getElementById('current-loss').textContent = loss.toFixed(0);
+            document.getElementById('predicted-value').textContent = value;
+            document.getElementById('error-value').textContent = Math.abs(actualValue - value);
+
+            updateLossGraph(value);
+        }
+
+        // Update learning rate
+        function updateLearningRate() {
+            const slider = document.getElementById('lr-slider');
+            const value = slider.value / 100;
+            learningRate = value;
+            document.getElementById('lr-value').textContent = value.toFixed(2);
+            
+            // Update info box based on learning rate
+            const infoBox = document.getElementById('lr-info-box');
+            const description = document.getElementById('lr-description');
+            
+            if (value < 0.3) {
+                infoBox.style.borderLeftColor = '#10b981';
+                description.innerHTML = `
+                    <strong>🐢 느린 학습 (${value.toFixed(2)})</strong><br>
+                    현재 학습률이 낮습니다. 학습이 안정적이지만 속도가 느립니다.<br>
+                    • 장점: 안정적이고 정확한 학습<br>
+                    • 단점: 최적값에 도달하는 시간이 오래 걸림
+                `;
+            } else if (value < 0.7) {
+                infoBox.style.borderLeftColor = '#f59e0b';
+                description.innerHTML = `
+                    <strong>✅ 적정 학습 (${value.toFixed(2)})</strong><br>
+                    현재 학습률이 적절합니다! 안정성과 속도의 균형이 좋습니다.<br>
+                    • 장점: 빠르면서도 안정적인 학습<br>
+                    • 추천: 대부분의 경우 이 범위가 좋습니다
+                `;
+            } else {
+                infoBox.style.borderLeftColor = '#ef4444';
+                description.innerHTML = `
+                    <strong>🚀 빠른 학습 (${value.toFixed(2)})</strong><br>
+                    현재 학습률이 높습니다. 학습이 빠르지만 불안정할 수 있습니다.<br>
+                    • 장점: 빠른 학습 속도<br>
+                    • 단점: 최적값을 지나치거나 발산할 위험
+                `;
+            }
+            
+            // Re-draw network with updated learning rate
+            const canvas = document.getElementById('networkCanvas');
+            const ctx = canvas.getContext('2d');
+            drawNetwork(ctx, canvas.width, canvas.height, learningRate);
+        }
+
+        // Loss graph visualization
+        function initializeLossGraph() {
+            updateLossGraph(60);
+        }
+
+        function updateLossGraph(predValue) {
+            const canvas = document.getElementById('lossCanvas');
+            const ctx = canvas.getContext('2d');
+            const actualValue = 80;
+            
+            // Set canvas size
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 40;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw axes
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(padding, height - padding);
+            ctx.lineTo(width - padding, height - padding);
+            ctx.lineTo(width - padding, padding);
+            ctx.stroke();
+            
+            // Draw labels
+            ctx.fillStyle = '#475569';
+            ctx.font = '13px "Noto Sans KR"';
+            ctx.fillText('예측값', width - padding - 50, height - 10);
+            ctx.save();
+            ctx.translate(15, height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('손실 (MSE)', -30, 0);
+            ctx.restore();
+            
+            // Draw loss curve
+            ctx.strokeStyle = '#0ea5e9';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            const xScale = (width - 2 * padding) / 100;
+            const yScale = (height - 2 * padding) / 6400; // max loss = 80^2
+            
+            for (let x = 0; x <= 100; x += 2) {
+                const loss = Math.pow(actualValue - x, 2);
+                const canvasX = padding + x * xScale;
+                const canvasY = height - padding - loss * yScale;
+                
+                if (x === 0) {
+                    ctx.moveTo(canvasX, canvasY);
+                } else {
+                    ctx.lineTo(canvasX, canvasY);
+                }
+            }
+            ctx.stroke();
+            
+            // Draw current point
+            const currentLoss = Math.pow(actualValue - predValue, 2);
+            const currentX = padding + predValue * xScale;
+            const currentY = height - padding - currentLoss * yScale;
+            
+            ctx.fillStyle = '#f59e0b';
+            ctx.beginPath();
+            ctx.arc(currentX, currentY, 7, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Draw actual value line
+            const actualX = padding + actualValue * xScale;
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(actualX, padding);
+            ctx.lineTo(actualX, height - padding);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Label for actual value
+            ctx.fillStyle = '#10b981';
+            ctx.fillText('실제값: 80', actualX - 40, padding - 10);
+        }
+
+        // Network visualization
+        function initializeNetworkVisualization() {
+            const canvas = document.getElementById('networkCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            drawNetwork(ctx, canvas.width, canvas.height, 0.01);
+        }
+
+        function drawNetwork(ctx, width, height, lr = 0.01) {
+            ctx.clearRect(0, 0, width, height);
+            
+            const layers = [2, 3, 3, 1]; // 2 inputs, 2 hidden layers with 3 nodes each, 1 output
+            const nodeRadius = 18;
+            const layerSpacing = width / (layers.length + 1);
+            
+            // Calculate positions
+            const positions = [];
+            layers.forEach((nodeCount, layerIndex) => {
+                const layerPositions = [];
+                const verticalSpacing = height / (nodeCount + 1);
+                
+                for (let i = 0; i < nodeCount; i++) {
+                    layerPositions.push({
+                        x: layerSpacing * (layerIndex + 1),
+                        y: verticalSpacing * (i + 1)
+                    });
+                }
+                positions.push(layerPositions);
+            });
+            
+            // Draw connections - thickness and opacity based on learning rate
+            const baseOpacity = 0.2;
+            const maxOpacity = 0.7;
+            const opacity = baseOpacity + (maxOpacity - baseOpacity) * lr;
+            
+            const baseLineWidth = 1;
+            const maxLineWidth = 4;
+            const lineWidth = baseLineWidth + (maxLineWidth - baseLineWidth) * lr;
+            
+            ctx.strokeStyle = `rgba(14, 165, 233, ${opacity})`;
+            ctx.lineWidth = lineWidth;
+            
+            for (let i = 0; i < positions.length - 1; i++) {
+                for (let j = 0; j < positions[i].length; j++) {
+                    for (let k = 0; k < positions[i + 1].length; k++) {
+                        ctx.beginPath();
+                        ctx.moveTo(positions[i][j].x, positions[i][j].y);
+                        ctx.lineTo(positions[i + 1][k].x, positions[i + 1][k].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            
+            // Draw nodes - size and color intensity based on learning rate
+            const baseNodeRadius = 15;
+            const maxNodeRadius = 20;
+            const nodeSize = baseNodeRadius + (maxNodeRadius - baseNodeRadius) * lr;
+            
+            positions.forEach((layer, layerIndex) => {
+                layer.forEach(pos => {
+                    // Node circle with gradient
+                    const gradient = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, nodeSize);
+                    
+                    // Color intensity based on learning rate
+                    const lightColor = `rgba(14, 165, 233, ${0.7 + lr * 0.3})`;
+                    const darkColor = `rgba(2, 132, 199, ${0.8 + lr * 0.2})`;
+                    
+                    gradient.addColorStop(0, lightColor);
+                    gradient.addColorStop(1, darkColor);
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, nodeSize, 0, 2 * Math.PI);
+                    ctx.fill();
+                    
+                    // Node border - thicker with higher learning rate
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 1.5 + lr * 1.5;
+                    ctx.stroke();
+                    
+                    // Add glow effect for high learning rates
+                    if (lr > 0.5) {
+                        ctx.shadowBlur = 10 * lr;
+                        ctx.shadowColor = 'rgba(14, 165, 233, 0.5)';
+                        ctx.beginPath();
+                        ctx.arc(pos.x, pos.y, nodeSize, 0, 2 * Math.PI);
+                        ctx.stroke();
+                        ctx.shadowBlur = 0;
+                    }
+                });
+            });
+            
+            // Labels
+            ctx.fillStyle = '#475569';
+            ctx.font = 'bold 12px "Noto Sans KR"';
+            ctx.textAlign = 'center';
+            
+            ctx.fillText('입력층', layerSpacing, height - 15);
+            ctx.fillText('은닉층1', layerSpacing * 2, height - 15);
+            ctx.fillText('은닉층2', layerSpacing * 3, height - 15);
+            ctx.fillText('출력층', layerSpacing * 4, height - 15);
+            
+            // Add learning rate indicator
+            ctx.fillStyle = lr < 0.3 ? '#10b981' : (lr < 0.7 ? '#f59e0b' : '#ef4444');
+            ctx.font = 'bold 14px "Noto Sans KR"';
+            ctx.textAlign = 'right';
+            const statusText = lr < 0.3 ? '느린 학습' : (lr < 0.7 ? '적정 학습' : '빠른 학습');
+            ctx.fillText(statusText, width - 20, 30);
+        }
+
+        // Training simulation
+        function initializeTrainingGraph() {
+            trainingHistory = [];
+            drawTrainingGraph();
+        }
+
+        function drawTrainingGraph() {
+            const canvas = document.getElementById('trainingCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 50;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw axes
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(padding, height - padding);
+            ctx.lineTo(width - padding, height - padding);
+            ctx.lineTo(width - padding, padding);
+            ctx.stroke();
+            
+            // Draw labels
+            ctx.fillStyle = '#475569';
+            ctx.font = '13px "Noto Sans KR"';
+            ctx.fillText('에포크', width - padding - 50, height - 10);
+            ctx.save();
+            ctx.translate(15, height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('손실', -20, 0);
+            ctx.restore();
+            
+            if (trainingHistory.length < 2) return;
+            
+            // Draw loss curve
+            const xScale = (width - 2 * padding) / maxEpochs;
+            const maxLoss = Math.max(...trainingHistory);
+            const yScale = (height - 2 * padding) / maxLoss;
+            
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            trainingHistory.forEach((loss, index) => {
+                const x = padding + index * xScale;
+                const y = height - padding - loss * yScale;
+                
+                if (index === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            ctx.stroke();
+            
+            // Draw current point
+            if (trainingHistory.length > 0) {
+                const lastIndex = trainingHistory.length - 1;
+                const lastX = padding + lastIndex * xScale;
+                const lastY = height - padding - trainingHistory[lastIndex] * yScale;
+                
+                ctx.fillStyle = '#ec4899';
+                ctx.beginPath();
+                ctx.arc(lastX, lastY, 6, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+
+        async function startTraining() {
+            if (isTraining) return;
+            
+            isTraining = true;
+            epoch = 0;
+            trainingHistory = [400]; // Initial loss
+            
+            document.getElementById('training-result').innerHTML = '학습 중입니다... ⏳';
+            
+            while (epoch < maxEpochs && isTraining) {
+                // Simulate training
+                epoch++;
+                
+                // Exponential decay of loss
+                currentLoss = 400 * Math.exp(-0.05 * epoch) + Math.random() * 10;
+                trainingHistory.push(currentLoss);
+                
+                // Update UI
+                document.getElementById('epoch').textContent = epoch;
+                document.getElementById('train-loss').textContent = currentLoss.toFixed(2);
+                
+                const accuracy = Math.min(100, 100 * (1 - currentLoss / 400));
+                document.getElementById('accuracy').textContent = accuracy.toFixed(1) + '%';
+                
+                drawTrainingGraph();
+                
+                // Slow down animation
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+            
+            isTraining = false;
+            
+            const finalAccuracy = Math.min(100, 100 * (1 - currentLoss / 400));
+            document.getElementById('training-result').innerHTML = `
+                학습이 완료되었습니다! 🎉<br>
+                최종 손실: <strong>${currentLoss.toFixed(2)}</strong><br>
+                최종 정확도: <strong>${finalAccuracy.toFixed(1)}%</strong><br><br>
+                오차가 처음 <strong>400</strong>에서 <strong>${currentLoss.toFixed(2)}</strong>로 줄어들었습니다!
+            `;
+        }
+
+        function resetTraining() {
+            isTraining = false;
+            epoch = 0;
+            currentLoss = 400;
+            trainingHistory = [];
+            
+            document.getElementById('epoch').textContent = '0';
+            document.getElementById('train-loss').textContent = '0';
+            document.getElementById('accuracy').textContent = '0%';
+            document.getElementById('training-result').innerHTML = '학습을 시작하려면 위의 "학습 시작" 버튼을 클릭하세요.';
+            
+            initializeTrainingGraph();
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            if (document.getElementById('lossCanvas')) {
+                const predValue = parseInt(document.getElementById('pred-slider').value);
+                updateLossGraph(predValue);
+            }
+            if (document.getElementById('networkCanvas')) {
+                const canvas = document.getElementById('networkCanvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+                drawNetwork(ctx, canvas.width, canvas.height, learningRate);
+            }
+            if (document.getElementById('trainingCanvas')) {
+                drawTrainingGraph();
+            }
+        });
+    </script>
+</body>
+</html>
